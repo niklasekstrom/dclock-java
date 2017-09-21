@@ -1,0 +1,18 @@
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+    //runtime group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.25'
+	runtime group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
+}
+
+task copyDependenciesToLib(type: Copy) {
+    into "$buildDir/libs"
+    from configurations.runtime
+}
+
+build.finalizedBy(copyDependenciesToLib)
