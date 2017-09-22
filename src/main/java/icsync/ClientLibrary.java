@@ -51,7 +51,7 @@ public class ClientLibrary {
 		}
 	}
 
-    final Logger logger = LoggerFactory.getLogger(ClientLibrary.class);
+	final Logger logger = LoggerFactory.getLogger(ClientLibrary.class);
 
 	ScheduledThreadPoolExecutor executor;
 	Address myAddress;
@@ -72,6 +72,7 @@ public class ClientLibrary {
 	ScheduledFuture<?> periodicTimer = null;
 
 	ClockTriple certainReading = null;
+	long lastReturnedCenter = 0;
 	long lastSynced = 0;
 
 	void init(InetSocketAddress clientAddress, InetSocketAddress coordinatorAddress) {
@@ -373,7 +374,9 @@ public class ClientLibrary {
 		MultipartResponse mres = MultipartResponse.deserialize(res);
 
 		if (mres.containsClock) {
-			processSyncResponse(mres.reqSent, now, mres.c, mres.e);
+			// To do: look up the latency depending on who I got the response from.
+			long latency = 0;
+			processSyncResponse(mres.reqSent, now, mres.c, mres.e, latency);
 			lastSynced = now;
 		}
 
@@ -421,8 +424,8 @@ public class ClientLibrary {
 		logger.info(sb.toString());
 	}
 
-	void processSyncResponse(long sent, long now, long c, long w) {
-		ClockTriple s = ClockTriple.sync(sent, now, c, w);
+	void processSyncResponse(long sent, long now, long c, long w, long latency) {
+		ClockTriple s = ClockTriple.sync(sent, now, c, w, latency);
 		if (certainReading == null) {
 			logger.info("Started clock at " + s);
 			certainReading = s;
@@ -436,7 +439,19 @@ public class ClientLibrary {
 
 	ClockTriple readClock(long now) {
 		ClockTriple ct = certainReading;
-		return ct == null ? null : ct.advanceGrowing(now);
+		if (ct == null) {
+			return null;
+		}
+
+		ct = ct.advanceGrowing(now);
+
+		// Make sure that the clock's interval center increases monotonically.
+		if (ct.c < lastReturnedCenter) {
+			ct = new ClockTriple(ct.h, lastReturnedCenter, ct.e + lastReturnedCenter - ct.c);
+		}
+
+		lastReturnedCenter = ct.c;
+		return ct;
 	}
 
 	void sendDatagram(InetSocketAddress address, ByteBuffer src) {

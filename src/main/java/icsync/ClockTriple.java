@@ -1,18 +1,19 @@
 package icsync;
 
-import java.util.concurrent.TimeUnit;
-
 public class ClockTriple {
 
-	static final int RHO = 100; // Parts per million (PPM).
-	static final int BETA = 100; // Parts per million (PPM).
+	// These default values should be updated based on configuration.
+	static int MY_RHO = 100;	// The skew for local hardware clock, in parts per million (ppm).
+	static int CS_RHO = 100;	// The max skew for any clock server's hardware clock.
+	static int BETA = 100;		// The extra skew allowed to the steering clock.
 
-	static final long DELTA = 0;
-	static final long DELTA_MIN = DELTA * (1000000L - RHO) / 1000000L;
+	static long skewMin(long t) {
+		return (t * (1000000L - MY_RHO)) / 1000000L;
+	}
 
-	static final long LEASE = TimeUnit.SECONDS.toNanos(10);
-	static final long LEASE_MIN = LEASE * (1000000L - RHO) / 1000000L;
-	static final long LEASE_MAX = (LEASE * (1000000L + RHO) + 999999L) / 1000000L;
+	static long skewMax(long t) {
+		return (t * (1000000L + MY_RHO) + 999999L) / 1000000L;
+	}
 
 	final long h;
 	final long c;
@@ -29,7 +30,7 @@ public class ClockTriple {
 		if (dh < 0) {
 			throw new RuntimeException("Cannot advance to a previous time");
 		}
-		long de = (dh * (RHO + RHO + BETA) + 999999L) / 1000000L;
+		long de = (dh * (MY_RHO + CS_RHO + BETA) + 999999L) / 1000000L;
 		return new ClockTriple(h2, c + dh, e + de);
 	}
 
@@ -79,9 +80,10 @@ public class ClockTriple {
 		return new ClockTriple(h, (u + l) / 2, (u - l) / 2);
 	}
 
-	public static ClockTriple sync(long sent, long now, long c, long e) {
-		long u = (c + e) + ((now - sent - DELTA_MIN) * (1000000L + RHO + RHO + BETA) + 999999L) / 1000000L;
-		long l = (c - e) + DELTA_MIN * (1000000L - RHO - RHO - BETA) / 1000000L;
+	public static ClockTriple sync(long sent, long now, long c, long e, long delta) {
+		long deltaMin = skewMin(delta);
+		long u = (c + e) + ((now - sent - deltaMin) * (1000000L + MY_RHO + MY_RHO + BETA) + 999999L) / 1000000L;
+		long l = (c - e) + (deltaMin * (1000000L - MY_RHO - MY_RHO - BETA)) / 1000000L;
 		u += (u - l) & 1L;
 		return new ClockTriple(now, (u + l) / 2, (u - l) / 2);
 	}

@@ -61,7 +61,9 @@ public class ClockServer {
 		}
 	}
 
-    final Logger logger = LoggerFactory.getLogger(ClockServer.class);
+	static final long LEASE = TimeUnit.SECONDS.toNanos(10);
+
+	final Logger logger = LoggerFactory.getLogger(ClockServer.class);
 
     ScheduledThreadPoolExecutor executor;
 	Address myAddress;
@@ -450,7 +452,7 @@ public class ClockServer {
 			// Otherwise the current round is less than this, and we cannot give a lease.
 
 			if (currentRound.equals(r)) {
-				leaseExpires = now + ClockTriple.LEASE_MAX;
+				leaseExpires = now + ClockTriple.skewMax(LEASE);
 
 				mres.gaveLease = r;
 				mres.reqSent = sent;
@@ -565,7 +567,9 @@ public class ClockServer {
 		}
 
 		if (mres.containsClock) {
-			processSyncResponse(mres.reqSent, now, mres.c, mres.e);
+			// To do: look up the latency depending on who I got the response from.
+			long latency = 0;
+			processSyncResponse(mres.reqSent, now, mres.c, mres.e, latency);
 		}
 
 		if (mres.cr != null) {
@@ -588,7 +592,9 @@ public class ClockServer {
 			}
 
 			if (myMRHO && mres.gaveLease.equals(mrho)) {
-				long expires = mres.reqSent + ClockTriple.DELTA_MIN + ClockTriple.LEASE_MIN;
+				// To do: look up the latency depending on who I got the response from.
+				long latency = 0;
+				long expires = mres.reqSent + ClockTriple.skewMin(latency) + ClockTriple.skewMin(LEASE);
 				if (neighbor.leaseExpiresEarliest < expires) {
 					neighbor.leaseExpiresEarliest = expires;
 				}
@@ -747,8 +753,8 @@ public class ClockServer {
 		unstablePeriodEnds = Math.max(unstablePeriodEnds, now + TimeUnit.SECONDS.toNanos(3));
 	}
 
-	void processSyncResponse(long sent, long now, long c, long e) {
-		ClockTriple s = ClockTriple.sync(sent, now, c, e);
+	void processSyncResponse(long sent, long now, long c, long e, long latency) {
+		ClockTriple s = ClockTriple.sync(sent, now, c, e, latency);
 
 		if (myMRHO && arbb.equals(mrho)) {
 

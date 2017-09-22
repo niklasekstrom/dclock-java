@@ -48,7 +48,7 @@ public class Coordinator {
 		}
 	}
 
-    final Logger logger = LoggerFactory.getLogger(Coordinator.class);
+	final Logger logger = LoggerFactory.getLogger(Coordinator.class);
 
     Address myAddress;
 	ScheduledThreadPoolExecutor executor;
