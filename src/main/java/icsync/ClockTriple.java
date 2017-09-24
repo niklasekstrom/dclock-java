@@ -2,7 +2,7 @@ package icsync;
 
 public class ClockTriple {
 
-	// These default values should be updated based on configuration.
+	// These default values should be updated from configuration.
 	static int MY_RHO = 100;	// The skew for local hardware clock, in parts per million (ppm).
 	static int CS_RHO = 100;	// The max skew for any clock server's hardware clock.
 	static int BETA = 100;		// The extra skew allowed to the steering clock.

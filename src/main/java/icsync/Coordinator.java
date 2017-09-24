@@ -17,7 +17,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -51,7 +50,7 @@ public class Coordinator {
 	final Logger logger = LoggerFactory.getLogger(Coordinator.class);
 
     Address myAddress;
-	ScheduledThreadPoolExecutor executor;
+	LoggingScheduledThreadPoolExecutor executor;
 	ThreadPoolExecutor addressLookupExecutor;
 	DatagramChannel ch;
 	Selector sel;
@@ -74,7 +73,7 @@ public class Coordinator {
 
 		logger.info("Initializing cordinator using address {}.", myAddress);
 
-		executor = new ScheduledThreadPoolExecutor(1);
+		executor = new LoggingScheduledThreadPoolExecutor(1, logger);
 		addressLookupExecutor = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 
 		try {

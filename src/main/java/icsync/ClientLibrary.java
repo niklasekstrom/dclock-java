@@ -16,7 +16,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -53,7 +52,7 @@ public class ClientLibrary {
 
 	final Logger logger = LoggerFactory.getLogger(ClientLibrary.class);
 
-	ScheduledThreadPoolExecutor executor;
+	LoggingScheduledThreadPoolExecutor executor;
 	Address myAddress;
 	DatagramChannel ch;
 	Selector selector;
@@ -82,7 +81,7 @@ public class ClientLibrary {
 
 		logger.info("Initializing using address {} and coordinator address {}.", myAddress, coordinator.address);
 
-		executor = new ScheduledThreadPoolExecutor(1);
+		executor = new LoggingScheduledThreadPoolExecutor(1, logger);
 
 		try {
 			selector = Selector.open();

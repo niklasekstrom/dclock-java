@@ -3,6 +3,7 @@ package icsync;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedSelectorException;
@@ -16,7 +17,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -61,11 +61,12 @@ public class ClockServer {
 		}
 	}
 
-	static final long LEASE = TimeUnit.SECONDS.toNanos(10);
+	// The lease length should be a configuration parameter.
+	static final long LEASE_LENGTH = TimeUnit.SECONDS.toNanos(10);
 
 	final Logger logger = LoggerFactory.getLogger(ClockServer.class);
 
-    ScheduledThreadPoolExecutor executor;
+    LoggingScheduledThreadPoolExecutor executor;
 	Address myAddress;
 	DatagramChannel ch;
 	Selector sel;
@@ -100,7 +101,7 @@ public class ClockServer {
 
 		logger.info("Initializing using address {}.", myAddress);
 
-		executor = new ScheduledThreadPoolExecutor(1);
+		executor = new LoggingScheduledThreadPoolExecutor(1, logger);
 
 		try {
 			sel = Selector.open();
@@ -111,7 +112,7 @@ public class ClockServer {
 
 			ch.register(sel, SelectionKey.OP_READ);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new UncheckedIOException(e);
 		}
 
 		executor.submit(this::initOnExecutor);
@@ -164,7 +165,7 @@ public class ClockServer {
 	void shutdownOnExecutor() {
 		shuttingDown = true;
 
-		// Cancel all timers.
+		// Cancel timers.
 		cancelScheduledCommunications();
 
 		if (leaseExpiresTimer != null) {
@@ -320,7 +321,6 @@ public class ClockServer {
 	}
 
 	void processMultipartRequest(InetSocketAddress address, ByteBuffer req) {
-		try {
 		long now = System.nanoTime();
 
 		MultipartRequest mreq = MultipartRequest.deserialize(req);
@@ -452,7 +452,7 @@ public class ClockServer {
 			// Otherwise the current round is less than this, and we cannot give a lease.
 
 			if (currentRound.equals(r)) {
-				leaseExpires = now + ClockTriple.skewMax(LEASE);
+				leaseExpires = now + ClockTriple.skewMax(LEASE_LENGTH);
 
 				mres.gaveLease = r;
 				mres.reqSent = sent;
@@ -488,9 +488,6 @@ public class ClockServer {
 
 		if (checkInterestSetChange) {
 			maybeUpdateInterestSet(checkRescheduleAll, now);
-		}
-		} catch (Exception e) {
-			e.printStackTrace();
 		}
 	}
 
@@ -594,7 +591,7 @@ public class ClockServer {
 			if (myMRHO && mres.gaveLease.equals(mrho)) {
 				// To do: look up the latency depending on who I got the response from.
 				long latency = 0;
-				long expires = mres.reqSent + ClockTriple.skewMin(latency) + ClockTriple.skewMin(LEASE);
+				long expires = mres.reqSent + ClockTriple.skewMin(latency) + ClockTriple.skewMin(LEASE_LENGTH);
 				if (neighbor.leaseExpiresEarliest < expires) {
 					neighbor.leaseExpiresEarliest = expires;
 				}
@@ -775,9 +772,9 @@ public class ClockServer {
 				}
 			} else {
 				if (latentSynchronization != null) {
-					ClockTriple ct2 = latentSynchronization.advanceGrowing(now);
-					if (ct2.isImprovedBy(s)) {
-						latentSynchronization = ct2.intersection(s);
+					ClockTriple ct = latentSynchronization.advanceGrowing(now);
+					if (ct.isImprovedBy(s)) {
+						latentSynchronization = ct.intersection(s);
 					}
 				} else {
 					latentSynchronization = s;
@@ -801,7 +798,7 @@ public class ClockServer {
 			throw new RuntimeException("The clock has been adjusted to a time in the future");
 		}
 
-		if (!myMRHO || !arbb.equals(mrho)) {
+		if (!(myMRHO && arbb.equals(mrho))) {
 			return certainReading.advanceGrowing(now);
 		}
 
@@ -884,6 +881,9 @@ public class ClockServer {
 
 		HashSet<Address> interestSet = getInterestSet();
 		if (interestSet.equals(currentInterestSet)) {
+			if (reschedule) {
+				rescheduleCommunications();
+			}
 			return;
 		}
 
