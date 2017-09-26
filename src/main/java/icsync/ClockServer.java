@@ -52,6 +52,8 @@ public class ClockServer {
 		long lastResponseReceived = 0;
 		boolean reachable = false;
 
+		long minLatency = 0; // A lower bound for the time it takes to send a message to/from this neighbor. 
+
 		boolean isReachable(long now) {
 			return now - lastResponseReceived < TimeUnit.SECONDS.toNanos(2);
 		}
@@ -96,12 +98,16 @@ public class ClockServer {
 	ClockTriple certainReading = null;
 	ClockTriple latentSynchronization = null;
 
+	MinLatencyMap latencyMap = null;
+
 	void init(InetSocketAddress address) {
 		myAddress = new Address(address); // Throws exception if address is unresolved.
 
 		logger.info("Initializing using address {}.", myAddress);
 
 		executor = new LoggingScheduledThreadPoolExecutor(1, logger);
+
+		latencyMap = new MinLatencyMap(myAddress);
 
 		try {
 			sel = Selector.open();
@@ -383,6 +389,7 @@ public class ClockServer {
 				for (Address m : cfg.members) {
 					if (!m.equals(myAddress) && !neighbors.containsKey(m.address)) {
 						Neighbor neighbor = new Neighbor(m);
+						neighbor.minLatency = latencyMap.getMinLatency(m);
 						neighbors.put(m.address, neighbor);
 					}
 				}
@@ -564,9 +571,7 @@ public class ClockServer {
 		}
 
 		if (mres.containsClock) {
-			// To do: look up the latency depending on who I got the response from.
-			long latency = 0;
-			processSyncResponse(mres.reqSent, now, mres.c, mres.e, latency);
+			processSyncResponse(mres.reqSent, now, mres.c, mres.e, neighbor.minLatency);
 		}
 
 		if (mres.cr != null) {
@@ -589,9 +594,7 @@ public class ClockServer {
 			}
 
 			if (myMRHO && mres.gaveLease.equals(mrho)) {
-				// To do: look up the latency depending on who I got the response from.
-				long latency = 0;
-				long expires = mres.reqSent + ClockTriple.skewMin(latency) + ClockTriple.skewMin(LEASE_LENGTH);
+				long expires = mres.reqSent + ClockTriple.skewMin(neighbor.minLatency) + ClockTriple.skewMin(LEASE_LENGTH);
 				if (neighbor.leaseExpiresEarliest < expires) {
 					neighbor.leaseExpiresEarliest = expires;
 				}
