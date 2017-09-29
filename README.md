@@ -20,10 +20,8 @@ Clients of the service implement interval clocks by synchronizing periodically a
 Interval clocks are implemented also by the Google TrueTime service. Their implementation is not available outside of Google and reportedly requires access to GPS receivers, which is not required by ICSync.
 
 Things to improve in the short term:
-- There should be a minimal latency matrix, such that if one process synchronizes against another then that minimal latency is taken into account to reduce the uncertainty that contributes to the clock interval width.
 - The clock skew rho and beta should be configurable.
 
 Improvements in a slightly longer term:
 - The current design of the coordinator is not fault-tolerant, but it should be straight-forward to make it fault-tolerant.
-- Clock servers cannot currently be restarted (by design), but that would probably be a useful feature.
 - If the code gets actual use it can probably be improved a lot.
