@@ -3,15 +3,15 @@ package icsync;
 public class ClockTriple {
 
 	// These default values should be updated from configuration.
-	static int MY_RHO = 100;	// The skew for local hardware clock, in parts per million (ppm).
-	static int CS_RHO = 100;	// The max skew for any clock server's hardware clock.
-	static int BETA = 100;		// The extra skew allowed to the steering clock.
+	static int MY_RHO = 100;	// The drift for local hardware clock, in parts per million (ppm).
+	static int CS_RHO = 100;	// The max drift for any clock server's hardware clock.
+	static int BETA = 100;		// The extra drift allowed to the steering clock.
 
-	static long skewMin(long t) {
+	static long driftMin(long t) {
 		return (t * (1000000L - MY_RHO)) / 1000000L;
 	}
 
-	static long skewMax(long t) {
+	static long driftMax(long t) {
 		return (t * (1000000L + MY_RHO) + 999999L) / 1000000L;
 	}
 
@@ -81,7 +81,7 @@ public class ClockTriple {
 	}
 
 	public static ClockTriple sync(long sent, long now, long c, long e, long delta) {
-		long deltaMin = skewMin(delta);
+		long deltaMin = driftMin(delta);
 		long u = (c + e) + ((now - sent - deltaMin) * (1000000L + MY_RHO + MY_RHO + BETA) + 999999L) / 1000000L;
 		long l = (c - e) + (deltaMin * (1000000L - MY_RHO - MY_RHO - BETA)) / 1000000L;
 		u += (u - l) & 1L;

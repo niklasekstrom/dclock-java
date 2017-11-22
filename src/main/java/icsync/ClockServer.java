@@ -128,7 +128,7 @@ public class ClockServer {
 
             // This prevents me from updating current round while I had, during last restart, given a lease.
             long now = System.nanoTime();
-            leaseExpires = now + ClockTriple.skewMax(LEASE_LENGTH);
+            leaseExpires = now + ClockTriple.driftMax(LEASE_LENGTH);
         }
 
         latencyMap = new MinLatencyMap(myAddress);
@@ -494,7 +494,7 @@ public class ClockServer {
             // Otherwise the current round is less than this, and we cannot give a lease.
 
             if (currentRound.equals(mreq.getLease)) {
-                leaseExpires = now + ClockTriple.skewMax(LEASE_LENGTH);
+                leaseExpires = now + ClockTriple.driftMax(LEASE_LENGTH);
 
                 mres.gaveLease = mreq.getLease;
                 mres.reqSent = mreq.sent;
@@ -662,7 +662,7 @@ public class ClockServer {
         }
 
         if (mres.gaveLease != null && myMRHO && mres.gaveLease.equals(mrho)) {
-            long expires = mres.reqSent + ClockTriple.skewMin(neighbor.minLatency) + ClockTriple.skewMin(LEASE_LENGTH);
+            long expires = mres.reqSent + ClockTriple.driftMin(neighbor.minLatency) + ClockTriple.driftMin(LEASE_LENGTH);
             if (neighbor.leaseExpiresEarliest < expires) {
                 neighbor.leaseExpiresEarliest = expires;
             }
