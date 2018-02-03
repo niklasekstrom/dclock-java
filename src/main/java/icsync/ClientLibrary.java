@@ -373,9 +373,9 @@ public class ClientLibrary {
 		MultipartResponse mres = MultipartResponse.deserialize(res);
 
 		if (mres.containsClock) {
-			// To do: look up the latency depending on who I got the response from.
-			long latency = 0;
-			processSyncResponse(mres.reqSent, now, mres.c, mres.e, latency);
+			// To do: look up the minimum latency depending on who I got the response from.
+			long minLatency = 0;
+			processSyncResponse(mres.reqSent, now, mres.c, mres.e, minLatency);
 			lastSynced = now;
 		}
 

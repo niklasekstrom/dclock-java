@@ -848,8 +848,8 @@ public class ClockServer {
         unstablePeriodEnds = Math.max(unstablePeriodEnds, now + TimeUnit.SECONDS.toNanos(3));
     }
 
-    void processSyncResponse(long sent, long now, long c, long e, long latency) {
-        ClockTriple s = ClockTriple.sync(sent, now, c, e, latency);
+    void processSyncResponse(long sent, long now, long c, long e, long minLatency) {
+        ClockTriple s = ClockTriple.sync(sent, now, c, e, minLatency);
 
         if (certainReading == null) {
             logger.info("Started clock at " + s);
@@ -1151,8 +1151,7 @@ public class ClockServer {
             return;
         }
         actuallySendDatagram(address, src);
-        // executor.schedule(() -> actuallySendDatagram(address, src), 90,
-        // TimeUnit.MILLISECONDS);
+        // executor.schedule(() -> actuallySendDatagram(address, src), 90, TimeUnit.MILLISECONDS);
     }
 
     void actuallySendDatagram(InetSocketAddress address, ByteBuffer src) {

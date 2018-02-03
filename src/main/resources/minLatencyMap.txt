@@ -1,4 +1,4 @@
 # Format:
 # to-address-regex from-address-regex min-latency-ms
 
-192.168.0.\d+   192.168.1.\d+   90
+192.168.0.\d+   192.168.1.\d+   0
